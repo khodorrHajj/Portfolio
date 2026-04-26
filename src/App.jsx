@@ -4,11 +4,14 @@ import { Center, Html, OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
 const MODEL_PATH = "/models/desk_pc_room.optimized.glb";
+const MOBILE_SCREEN_UI_DELAY_MS = 1200;
+const ROOM_TRANSITION_MS = 900;
 const ROOM_CAMERA_POSITION = [0, 1.0, 5.2];
 const ROOM_TARGET = [0, 0, 0];
 const INTRO_CAMERA_POSITION = [0, 1.0, 10.5];
 const INTRO_TARGET = [0, 1.05, 7.2];
 const INTRO_POPUP_POSITION = [0, 1.05, 7.2];
+const MOBILE_BREAKPOINT = 768;
 const DESKTOP_FOLDERS = [
   "About Me",
   "Projects",
@@ -340,11 +343,11 @@ function FolderIcon({ title, onOpen }) {
   );
 }
 
-function DesktopWindow({ title, onClose }) {
+function DesktopWindow({ className = "", title, onClose }) {
   const sections = FOLDER_CONTENT[title];
 
   return (
-    <section className="desktop-window">
+    <section className={`desktop-window ${className}`.trim()}>
       <header className="desktop-window__header">
         <strong>{title}</strong>
         <button
@@ -385,7 +388,19 @@ function DesktopWindow({ title, onClose }) {
   );
 }
 
-function DesktopScreen({ isVisible, opacity, screenRect }) {
+function MobileFolderTab({ isActive, title, onOpen }) {
+  return (
+    <button
+      className={`mobile-folder-tab${isActive ? " mobile-folder-tab--active" : ""}`}
+      onClick={() => onOpen(title)}
+      type="button"
+    >
+      {title}
+    </button>
+  );
+}
+
+function DesktopScreen({ isMobile, isVisible, opacity, screenRect }) {
   const [openWindow, setOpenWindow] = useState(null);
 
   useEffect(() => {
@@ -395,6 +410,37 @@ function DesktopScreen({ isVisible, opacity, screenRect }) {
   }, [isVisible]);
 
   if (!isVisible || !screenRect) return null;
+
+  if (isMobile) {
+    return (
+      <section className="desktop-screen desktop-screen--mobile" style={{ opacity }}>
+        <div className="desktop-screen__mobile-shell">
+          <div className="desktop-screen__mobile-folders">
+            {DESKTOP_FOLDERS.map((folder) => (
+              <MobileFolderTab
+                key={folder}
+                isActive={openWindow === folder}
+                onOpen={setOpenWindow}
+                title={folder}
+              />
+            ))}
+          </div>
+
+          {openWindow ? (
+            <DesktopWindow
+              className="desktop-window--mobile"
+              title={openWindow}
+              onClose={() => setOpenWindow(null)}
+            />
+          ) : (
+            <section className="desktop-screen__mobile-placeholder">
+              <p>Tap a folder to open it.</p>
+            </section>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="desktop-screen">
@@ -460,6 +506,8 @@ function CameraRig({
   controlsRef,
   hasEnteredWorld,
   isScreenFocused,
+  isMobile,
+  isRoomTransitioning,
   onScreenRevealChange,
   screenTarget,
 }) {
@@ -511,7 +559,7 @@ function CameraRig({
         .clone()
         .add(leftVector.multiplyScalar(0.08));
 
-      const focusDistance = 1.15;
+      const focusDistance = isMobile ? 0.78 : 1.15;
       const focusPosition = screenCenter
         .clone()
         .add(directionFromScreenToRoomCamera.multiplyScalar(focusDistance));
@@ -529,12 +577,15 @@ function CameraRig({
       );
       nextReveal = THREE.MathUtils.smoothstep(
         travelProgress,
-        0.9,
-        0.955,
+        isMobile ? 0.82 : 0.9,
+        isMobile ? 0.93 : 0.955,
       );
-    } else {
+    } else if (isRoomTransitioning) {
       desiredPosition.current.copy(roomPosition);
       desiredTarget.current.copy(roomTarget);
+    } else {
+      onScreenRevealChange(nextReveal);
+      return;
     }
 
     const damping = 1 - Math.exp(-4 * delta);
@@ -551,9 +602,52 @@ export default function App() {
   const controlsRef = useRef(null);
   const [hasEnteredWorld, setHasEnteredWorld] = useState(false);
   const [isScreenFocused, setIsScreenFocused] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isRoomTransitioning, setIsRoomTransitioning] = useState(false);
+  const [isMobileScreenUiVisible, setIsMobileScreenUiVisible] = useState(false);
   const [screenReveal, setScreenReveal] = useState(0);
   const [screenTarget, setScreenTarget] = useState(null);
   const [screenRect, setScreenRect] = useState(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const updateIsMobile = () => setIsMobile(mediaQuery.matches);
+
+    updateIsMobile();
+    mediaQuery.addEventListener("change", updateIsMobile);
+
+    return () => mediaQuery.removeEventListener("change", updateIsMobile);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setIsMobileScreenUiVisible(false);
+      return undefined;
+    }
+
+    if (!isScreenFocused) {
+      setIsMobileScreenUiVisible(false);
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsMobileScreenUiVisible(true);
+    }, MOBILE_SCREEN_UI_DELAY_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isMobile, isScreenFocused]);
+
+  useEffect(() => {
+    if (!hasEnteredWorld || isScreenFocused) return undefined;
+
+    setIsRoomTransitioning(true);
+
+    const timeoutId = window.setTimeout(() => {
+      setIsRoomTransitioning(false);
+    }, ROOM_TRANSITION_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [hasEnteredWorld, isScreenFocused]);
 
   return (
     <main className="app-shell">
@@ -562,7 +656,10 @@ export default function App() {
       {isScreenFocused ? (
         <button
           className="back-button"
-          onClick={() => setIsScreenFocused(false)}
+          onClick={() => {
+            setIsScreenFocused(false);
+            setIsRoomTransitioning(true);
+          }}
           type="button"
         >
           Back to room
@@ -570,8 +667,9 @@ export default function App() {
       ) : null}
 
       <DesktopScreen
-        isVisible={isScreenFocused}
-        opacity={screenReveal}
+        isMobile={isMobile}
+        isVisible={isMobile ? isMobileScreenUiVisible : isScreenFocused}
+        opacity={isMobile ? 1 : screenReveal}
         screenRect={screenRect}
       />
 
@@ -608,7 +706,10 @@ export default function App() {
           />
           <WelcomePopup
             isVisible={!hasEnteredWorld}
-            onEnterWorld={() => setHasEnteredWorld(true)}
+            onEnterWorld={() => {
+              setHasEnteredWorld(true);
+              setIsRoomTransitioning(true);
+            }}
           />
         </Suspense>
 
@@ -620,13 +721,19 @@ export default function App() {
           enablePan={false}
           enableZoom={hasEnteredWorld && !isScreenFocused}
           enableRotate={hasEnteredWorld && !isScreenFocused}
+          minAzimuthAngle={-Math.PI / 4}
           minDistance={isScreenFocused ? 0.9 : 2}
+          maxAzimuthAngle={Math.PI / 4}
           maxDistance={isScreenFocused ? 2 : 20}
+          maxPolarAngle={Math.PI / 2 + Math.PI / 9}
+          minPolarAngle={Math.PI / 2 - Math.PI / 9}
         />
         <CameraRig
           controlsRef={controlsRef}
           hasEnteredWorld={hasEnteredWorld}
           isScreenFocused={isScreenFocused}
+          isMobile={isMobile}
+          isRoomTransitioning={isRoomTransitioning}
           onScreenRevealChange={setScreenReveal}
           screenTarget={screenTarget}
         />
