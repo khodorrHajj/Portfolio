@@ -16,93 +16,241 @@ const DESKTOP_FOLDERS = [
   "About Me",
   "Projects",
   "Skills",
+  "Experience",
+  "Education",
   "Contact",
 ];
 
 const FOLDER_CONTENT = {
   "About Me": [
     {
-      heading: "Who I Am",
+      heading: "Khodor El Hajj Moussa",
+      meta: "Computer Science Undergraduate | Full-Stack Developer Intern",
       body: (
         <>
-          Hey i am Khodor El Hajj Moussa, a <strong>CS student</strong> that is
-          near graduation at Antonine University, and passionate about coding,
-          building stuff and exploring paths.
+          I am a <strong>Computer Science undergraduate</strong> at Antonine
+          University, expected Jan 2027, focused on full-stack development and
+          practical software projects.
         </>
       ),
     },
     {
-      heading: "What I Like Building",
-      body: "I worked on multiple projects, which some of them were dedicated as University Projects and others that were self taught and made, i only look to the opportunity to learn more and build a good portfolio for myself.",
+      heading: "What I Build",
+      body: "I build and deploy applications with React, Next.js, TypeScript, FastAPI, PostgreSQL, Docker, and Python, with extra project work in computer vision, developer tooling, and compiler fundamentals.",
     },
     {
-      heading: "Cuurent Goal",
-      body: "Improving my skills, and working with production level projects is what i am looking to learn and improve, and growing more as a developer. Also i am looking forward to continue as a Software Engineer in the future.",
+      heading: "Current Focus",
+      body: "I am growing toward production-level software engineering work: cleaner architecture, stronger backend systems, useful user experiences, and projects that solve real problems.",
     },
   ],
   Projects: [
     {
-      heading: "ASL-ML",
-      body: "A computer vision and machine learning-based real-time American Sign Language translator that translates hand gestures into text. It enables static alphabet gestures, dynamic word gestures, prediction correction, and AI-based word recommendations, via a React and FastAPI user interface.",
-      link: "https://github.com/khodorrHajj/ASL-Real-Time-Sign-Language-Translator",
+      heading: "LiraTrack - Lebanese Finance Tracker",
+      meta: "Full-Stack Finance App | Next.js, React, TypeScript, FastAPI, PostgreSQL, Docker",
+      body: "A full-stack personal finance app designed around Lebanon's mixed LBP/USD financial environment, including cash wallets, card balances, income, expenses, net worth tracking, and exchange-rate-aware reporting.",
+      items: [
+        "Implemented email/password login, Google sign-in, email verification, password reset, signed JWT access/refresh tokens, optional TOTP 2FA, bcrypt hashing, account deletion, restricted CORS, origin checks, and browser security headers.",
+        "Built wallet tracking, categories, recurring transactions, OCR receipt scanning, SMS-based transaction draft creation, pending transaction review, Arabic/English support, and PDF report export.",
+        "Structured the backend with FastAPI routers, Pydantic schemas, SQLAlchemy models, Alembic migrations, service-layer logic, and Dockerized frontend/backend/PostgreSQL development.",
+      ],
+      links: [
+        {
+          href: "https://github.com/khodorrHajj/Lebanese_Finance_Tracker",
+          label: "GitHub",
+        },
+        {
+          href: "https://lebanese-finance-tracker.vercel.app",
+          label: "Live",
+        },
+      ],
     },
     {
-      heading: "Repo Analyzer",
-      body: "A command-line interface to analyze GitHub repositories and produce reports for decision making. It assesses activity, documentation, engineering practices, contributor risks, ownership, and recruiter signals to provide a quick overview of a repository's quality and risks.",
-      link: "https://github.com/khodorrHajj/GithubRepoAnalyzer",
+      heading: "ASL-ML - Real-Time American Sign Language Translator",
+      meta: "Computer Vision / Full-Stack ML App | Python, FastAPI, WebSockets, React, MediaPipe, PyTorch, ONNX",
+      body: "A real-time ASL translation system that converts webcam hand gestures into text using computer vision, deep learning, and natural language processing.",
+      items: [
+        "Developed a React frontend and FastAPI WebSocket backend for webcam frame streaming, MediaPipe hand landmark extraction, and live predictions.",
+        "Implemented static alphabet recognition with a PyTorch MLP exported to ONNX, dynamic gesture recognition using an LSTM sequence model, and GPT-2-based word suggestions.",
+        "Added multi-frame consistency checks to reduce noisy live predictions.",
+      ],
+      links: [
+        {
+          href: "https://github.com/khodorrHajj/ASL-Real-Time-Sign-Language-Translator",
+          label: "GitHub",
+        },
+      ],
+    },
+    {
+      heading: "repo-analyzer - GitHub Repository Analyzer",
+      meta: "Published Python CLI Tool | Python, Click, Rich, Requests, pytest, PyPI",
+      body: "A Python CLI package for GitHub repository due diligence, helping developers and recruiters evaluate repository health directly from the terminal.",
+      items: [
+        "Built analysis for activity, community signals, maintenance, documentation, engineering hygiene, contributor risk, bus factor, ownership concentration, and overall health scoring.",
+        "Implemented recruiter mode, side-by-side comparison, JSON/PDF export, GitHub token support, caching controls, and terminal-friendly Rich output.",
+        "Packaged the tool for PyPI and added pytest-based support for CLI and analysis behavior.",
+      ],
+      links: [
+        {
+          href: "https://github.com/khodorrHajj/GithubRepoAnalyzer",
+          label: "GitHub",
+        },
+        {
+          href: "https://pypi.org/project/repo-analyzer",
+          label: "PyPI",
+        },
+      ],
     },
     {
       heading: "Compiler Workbench",
-      body: "A desktop Qt application to learn and experiment with compiler techniques. It offers a tool to design automata, perform lexical analysis, parsing, semantic analysis, display the AST (Abstract Syntax Tree) and generate some code.",
-      link: "https://github.com/khodorrHajj/CompilerDesign",
-    },
-    {
-      heading: "Finance Tracker",
-      body: "A financial tracker for Lebanese citizens to monitor their wallet, expenses and currency rates. It features receipt scanning using OCR, real-time LBP-to-USD conversion, Google OAuth authentication, email TOTP, Password Recovery, Autheticator 2FA, and a set of tools to enable users to track their expenses in a multi-currency world.",
-      link: "#",
-      linkLabel: "Still in development",
+      meta: "University / Team Project | C++17, Qt 6, qmake",
+      body: "A desktop Qt application for exploring compiler construction concepts through an integrated visual workbench.",
+      items: [
+        "Implemented automata design, lexical analysis, grammar-based parsing, parse tree visualization, semantic analysis, AST inspection, symbol table handling, and basic target-code generation.",
+        "Supported DFA/NFA creation, NFA-to-DFA conversion, DFA minimization, regex-to-automaton workflows, diagnostics, and code generation to Python, Java, JavaScript, and Assembly.",
+        "Organized the app into domain models, processing utilities, and Qt UI modules for automata, grammar, lexical analysis, and semantic analysis.",
+      ],
+      links: [
+        {
+          href: "https://github.com/khodorrHajj/CompilerDesign",
+          label: "GitHub",
+        },
+      ],
     },
   ],
   Skills: [
     {
+      heading: "Strongest",
+      tags: [
+        "JavaScript",
+        "TypeScript",
+        "Python",
+        "React",
+        "Next.js",
+        "FastAPI",
+        "REST APIs",
+        "SQL",
+        "Git",
+        "GitHub",
+      ],
+    },
+    {
+      heading: "Backend & Databases",
+      tags: [
+        "PostgreSQL",
+        "SQLAlchemy",
+        "Alembic",
+        "MySQL",
+        "SQLite",
+        "JWT",
+        "OAuth",
+        "TOTP",
+        "bcrypt",
+      ],
+    },
+    {
       heading: "Frontend",
-      body: "React, JavaScript, HTML, CSS, and building responsive interfaces for projects and learning purposes.",
-    },
-    {
-      heading: "Backend",
-      body: "FastAPI, backend fundamentals, working with APIs, and connecting backend logic with frontend applications.",
-    },
-    {
-      heading: "Programming Languages",
-      body: "Python, JavaScript, C++, and Java through university work and personal projects.",
+      tags: [
+        "React",
+        "Next.js",
+        "Tailwind CSS",
+        "HTML/CSS",
+        "Three.js",
+        "React Three Fiber",
+        "Vite",
+      ],
     },
     {
       heading: "Tools",
-      body: "Git, GitHub, command line usage, Qt basics, OCR integrations, and experimenting with machine learning projects.",
+      tags: [
+        "Docker",
+        "Docker Compose",
+        "pytest",
+        "Click",
+        "Rich",
+        "Qt",
+        "Linux/CLI basics",
+      ],
     },
     {
-      heading: "What I Am Improving",
-      body: "Project structure, problem solving, writing cleaner code, and improving my full-stack development skills through practice.",
+      heading: "ML / Computer Vision",
+      tags: ["MediaPipe", "OpenCV", "PyTorch", "ONNX", "scikit-learn"],
+    },
+    {
+      heading: "Familiar / Class & Lab Experience",
+      tags: ["C++", "C#", "PHP", "Laravel", ".NET", "MongoDB"],
     },
   ],
   Experience: [
     {
-      heading: "School Coding Tutor",
-      body: "School Coding Tutor with an experience of over 2 years, where i worked with Jtech Academy And Istay, and i tutored at multiple schools including Val Per Jacques, SSCC Hadath, Notre Dame De Jamhour",
+      heading: "Programming Instructor - Jtech & Istay",
+      meta: "2024 - Present",
+      body: "Taught programming and robotics fundamentals across 5 classes at Val Pere Jacques, SSCC Hadath, and Notre Dame De Jamhour.",
+      items: [
+        "Led beginner-friendly sessions using Arduino, Micro:bit, Tinkercad, Minecraft Education, and Microsoft Arcade.",
+        "Helped students understand programming logic, electronics concepts, interactive projects, and problem-solving through hands-on exercises.",
+      ],
+    },
+    {
+      heading: "Waiter - DipnDip",
+      meta: "Dec 2024 - Nov 2025",
+      body: "Worked in a fast-paced customer-facing environment requiring communication, reliability, multitasking, and teamwork.",
+    },
+  ],
+  Education: [
+    {
+      heading: "Antonine University",
+      meta: "B.S. Computer Science | Expected Jan 2027",
+      body: "Computer Science undergraduate focused on full-stack development, practical software projects, and software engineering fundamentals.",
+    },
+    {
+      heading: "Languages",
+      tags: ["Arabic - Native", "English - Fluent", "French - Intermediate"],
     },
   ],
   Contact: [
     {
       heading: "Email",
       body: "khodorhajjmoussa@gmail.com",
+      links: [
+        {
+          href: "mailto:khodorhajjmoussa@gmail.com",
+          label: "Send email",
+        },
+      ],
     },
     {
       heading: "Phone",
-      body: "+96170626913",
+      body: "+961 70 626 913",
+      links: [
+        {
+          href: "tel:+96170626913",
+          label: "Call",
+        },
+      ],
     },
     {
       heading: "Location",
-      body: "Betchay Lebanon",
+      body: "Betchay, Lebanon",
+    },
+    {
+      heading: "GitHub",
+      body: "github.com/khodorrHajj",
+      links: [
+        {
+          href: "https://github.com/khodorrHajj",
+          label: "Open GitHub",
+        },
+      ],
+    },
+    {
+      heading: "Live Project",
+      body: "lebanese-finance-tracker.vercel.app",
+      links: [
+        {
+          href: "https://lebanese-finance-tracker.vercel.app",
+          label: "Open app",
+        },
+      ],
     },
   ],
 };
@@ -364,16 +512,45 @@ function DesktopWindow({ className = "", title, onClose }) {
           sections.map((section) => (
             <section className="desktop-window__section" key={section.heading}>
               <h2>{section.heading}</h2>
-              <p>{section.body}</p>
-              {section.link ? (
-                <a
-                  className="desktop-window__link"
-                  href={section.link}
-                  rel="noreferrer"
-                  target="_blank"
-                >
-                  {section.linkLabel ?? "GitHub"}
-                </a>
+              {section.meta ? (
+                <p className="desktop-window__meta">{section.meta}</p>
+              ) : null}
+              {section.body ? <p>{section.body}</p> : null}
+              {section.items ? (
+                <ul className="desktop-window__list">
+                  {section.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : null}
+              {section.tags ? (
+                <div className="desktop-window__tags">
+                  {section.tags.map((tag) => (
+                    <span className="desktop-window__tag" key={tag}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {section.links || section.link ? (
+                <div className="desktop-window__links">
+                  {(section.links ?? [
+                    {
+                      href: section.link,
+                      label: section.linkLabel ?? "GitHub",
+                    },
+                  ]).map((link) => (
+                    <a
+                      className="desktop-window__link"
+                      href={link.href}
+                      key={link.href}
+                      rel="noreferrer"
+                      target={link.href.startsWith("http") ? "_blank" : undefined}
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
               ) : null}
             </section>
           ))
