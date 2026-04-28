@@ -36,7 +36,13 @@ body {
 }
 
 .scene-welcome {
-  pointer-events: auto !important;
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  pointer-events: none;
 }
 
 .welcome-popup {
@@ -49,6 +55,7 @@ body {
   color: #f4f4f5;
   text-align: center;
   backdrop-filter: blur(10px);
+  pointer-events: auto;
 }
 
 .welcome-popup h1 {
@@ -62,6 +69,13 @@ body {
   color: #d4d4d8;
   font-size: 1rem;
   line-height: 1.55;
+}
+
+.welcome-popup__note {
+  margin: 0.7rem 0 0;
+  color: #c7c7cd;
+  font-size: 0.92rem;
+  line-height: 1.45;
 }
 
 .welcome-popup__button {

@@ -12,7 +12,6 @@ const ROOM_CAMERA_POSITION = [0, 1.0, 5.2];
 const ROOM_TARGET = [0, 0, 0];
 const INTRO_CAMERA_POSITION = [0, 1.0, 10.5];
 const INTRO_TARGET = [0, 1.05, 7.2];
-const INTRO_POPUP_POSITION = [0, 1.05, 7.2];
 const MOBILE_BREAKPOINT = 768;
 const LAMP_BULB_NODE_NAME = "lora_3x60W_bulb_40W_0";
 const LAMP_BULB_MATERIAL_NAME = "bulb_40W";
@@ -683,18 +682,17 @@ function WelcomePopup({ isVisible, onEnterWorld }) {
   if (!isVisible) return null;
 
   return (
-    <Html
-      center
-      className="scene-welcome"
-      distanceFactor={1.7}
-      position={INTRO_POPUP_POSITION}
-      sprite
-      transform
-    >
+    <div className="scene-welcome">
       <section className="welcome-popup" aria-live="polite">
         <h1>Welcome to my portfolio</h1>
         <p className="welcome-popup__line">
           Click on the monitor screen to see my portfolio.
+        </p>
+        <p className="welcome-popup__note">
+          <em>
+            Recommended: For a seamless experience use this website on a
+            desktop.
+          </em>
         </p>
         <button
           className="welcome-popup__button"
@@ -704,7 +702,7 @@ function WelcomePopup({ isVisible, onEnterWorld }) {
           Explore the world
         </button>
       </section>
-    </Html>
+    </div>
   );
 }
 
@@ -1143,6 +1141,14 @@ export default function App() {
         <div className="intro-scene-blur" aria-hidden="true" />
       ) : null}
 
+      <WelcomePopup
+        isVisible={!hasEnteredWorld}
+        onEnterWorld={() => {
+          setHasEnteredWorld(true);
+          setIsRoomTransitioning(true);
+        }}
+      />
+
       {isScreenFocused ? (
         <button
           className="back-button"
@@ -1190,13 +1196,6 @@ export default function App() {
             }}
             onScreenReady={setScreenTarget}
             onScreenRectChange={setScreenRect}
-          />
-          <WelcomePopup
-            isVisible={!hasEnteredWorld}
-            onEnterWorld={() => {
-              setHasEnteredWorld(true);
-              setIsRoomTransitioning(true);
-            }}
           />
         </Suspense>
 
