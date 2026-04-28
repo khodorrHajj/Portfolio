@@ -5,6 +5,8 @@ import * as THREE from "three";
 
 const MODEL_PATH = "/models/desk_pc_room.optimized.glb";
 const MOBILE_SCREEN_UI_DELAY_MS = 1200;
+const DESKTOP_BOOT_START_DELAY_MS = 500;
+const DESKTOP_BOOT_DURATION_MS = 2500;
 const ROOM_TRANSITION_MS = 900;
 const ROOM_CAMERA_POSITION = [0, 1.0, 5.2];
 const ROOM_TARGET = [0, 0, 0];
@@ -12,6 +14,12 @@ const INTRO_CAMERA_POSITION = [0, 1.0, 10.5];
 const INTRO_TARGET = [0, 1.05, 7.2];
 const INTRO_POPUP_POSITION = [0, 1.05, 7.2];
 const MOBILE_BREAKPOINT = 768;
+const LAMP_BULB_NODE_NAME = "lora_3x60W_bulb_40W_0";
+const LAMP_BULB_MATERIAL_NAME = "bulb_40W";
+const LAMP_LIGHT_COLOR = "#ffd38a";
+const DESK_LIGHT_TARGET_POSITION = [-3.9, 2.12, -0.05];
+const DESK_LIGHT_POOL_POSITION = [-3.9, 2.46, -0.05];
+const DESK_LIGHT_POOL_RADIUS = 1.55;
 const DESKTOP_FOLDERS = [
   "About Me",
   "Projects",
@@ -199,7 +207,7 @@ const FOLDER_CONTENT = {
   Education: [
     {
       heading: "Antonine University",
-      meta: "B.S. Computer Science | Expected Jan 2027",
+      meta: "B.S. Computer Science",
       body: "Computer Science undergraduate focused on full-stack development, practical software projects, and software engineering fundamentals.",
     },
     {
@@ -300,6 +308,87 @@ function getProjectedMeshRect(mesh, camera, viewportSize) {
   };
 }
 
+function getScreenFocusCameraState(screenPosition, isMobile) {
+  const screenCenter = Array.isArray(screenPosition)
+    ? new THREE.Vector3(...screenPosition)
+    : screenPosition.clone();
+  const roomPosition = new THREE.Vector3(...ROOM_CAMERA_POSITION);
+  const directionFromScreenToRoomCamera = roomPosition
+    .clone()
+    .sub(screenCenter);
+  directionFromScreenToRoomCamera.y = 0;
+
+  if (directionFromScreenToRoomCamera.lengthSq() === 0) {
+    directionFromScreenToRoomCamera.set(0, 0, 1);
+  } else {
+    directionFromScreenToRoomCamera.normalize();
+  }
+
+  const focusDistance = isMobile ? 0.78 : 1.15;
+  const focusPosition = screenCenter
+    .clone()
+    .add(directionFromScreenToRoomCamera.multiplyScalar(focusDistance));
+  focusPosition.y = screenCenter.y;
+
+  return {
+    position: focusPosition,
+    target: screenCenter,
+  };
+}
+
+function materialMatchesName(material, name) {
+  if (!material) return false;
+
+  if (Array.isArray(material)) {
+    return material.some((entry) => materialMatchesName(entry, name));
+  }
+
+  return material.name === name;
+}
+
+function cloneAndWarmBulbMaterial(material) {
+  if (!material) return material;
+
+  if (Array.isArray(material)) {
+    return material.map(cloneAndWarmBulbMaterial);
+  }
+
+  if (material.name !== LAMP_BULB_MATERIAL_NAME) return material;
+
+  const nextMaterial = material.clone();
+  if (nextMaterial.emissive) {
+    nextMaterial.emissive.set(LAMP_LIGHT_COLOR);
+    nextMaterial.emissiveIntensity = 3.2;
+  }
+  nextMaterial.toneMapped = false;
+  nextMaterial.needsUpdate = true;
+
+  return nextMaterial;
+}
+
+function createDeskLightPoolTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 512;
+
+  const context = canvas.getContext("2d");
+  const gradient = context.createRadialGradient(256, 256, 0, 256, 256, 256);
+  gradient.addColorStop(0, "rgba(255, 240, 190, 0.38)");
+  gradient.addColorStop(0.28, "rgba(255, 211, 138, 0.24)");
+  gradient.addColorStop(0.62, "rgba(255, 180, 82, 0.1)");
+  gradient.addColorStop(0.86, "rgba(255, 159, 55, 0.03)");
+  gradient.addColorStop(1, "rgba(255, 180, 82, 0)");
+
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+
+  return texture;
+}
+
 function makeInvisibleButClickable(material) {
   if (!material) return;
 
@@ -310,7 +399,9 @@ function makeInvisibleButClickable(material) {
 }
 
 function Model({
+  isMobile,
   isScreenFocused,
+  onFinalScreenRectChange,
   onScreenClick,
   onScreenReady,
   onScreenRectChange,
@@ -322,9 +413,42 @@ function Model({
   const screenMaterialRef = useRef(null);
   const screenHitboxRef = useRef(null);
   const lastScreenRectRef = useRef(null);
+  const finalScreenCameraRef = useRef(null);
 
   useEffect(() => {
+    const createdLights = [];
+    const createdObjects = [];
+    const clonedMaterials = [];
+    const createdMaterials = [];
+    const createdTextures = [];
+    let bulbNode = null;
+
     model.traverse((child) => {
+      if (child.isMesh) {
+        const isScreenHitbox = child.name === "Screen_Hitbox";
+        const isLampBulb =
+          child.name === LAMP_BULB_NODE_NAME ||
+          materialMatchesName(child.material, LAMP_BULB_MATERIAL_NAME);
+
+        child.castShadow = !isScreenHitbox && !isLampBulb;
+        child.receiveShadow = !isScreenHitbox;
+
+        if (isLampBulb) {
+          child.material = cloneAndWarmBulbMaterial(child.material);
+          bulbNode = child;
+
+          if (Array.isArray(child.material)) {
+            clonedMaterials.push(
+              ...child.material.filter(
+                (material) => material.name === LAMP_BULB_MATERIAL_NAME,
+              ),
+            );
+          } else if (child.material) {
+            clonedMaterials.push(child.material);
+          }
+        }
+      }
+
       if (child.name !== "Screen_Hitbox") return;
 
       const overlayMaterial = new THREE.MeshBasicMaterial({
@@ -340,7 +464,78 @@ function Model({
       screenHitboxRef.current = child;
     });
 
+    if (bulbNode) {
+      model.updateWorldMatrix(true, true);
+      bulbNode.updateWorldMatrix(true, false);
+
+      const bulbWorldPosition = new THREE.Vector3();
+      bulbNode.getWorldPosition(bulbWorldPosition);
+      const bulbModelPosition = model.worldToLocal(bulbWorldPosition.clone());
+
+      const lampTarget = new THREE.Object3D();
+      lampTarget.name = "KhodorOS_LampSpotTarget";
+      lampTarget.position.set(...DESK_LIGHT_TARGET_POSITION);
+      model.add(lampTarget);
+      createdObjects.push(lampTarget);
+
+      const lampSpot = new THREE.SpotLight(
+        LAMP_LIGHT_COLOR,
+        520,
+        18,
+        Math.PI / 5.2,
+        0.34,
+        0.9,
+      );
+      lampSpot.name = "KhodorOS_LampSpotLight";
+      lampSpot.castShadow = true;
+      lampSpot.target = lampTarget;
+      lampSpot.position.copy(bulbModelPosition);
+      lampSpot.shadow.mapSize.set(2048, 2048);
+      lampSpot.shadow.camera.near = 0.08;
+      lampSpot.shadow.camera.far = 13;
+      lampSpot.shadow.bias = -0.0007;
+      lampSpot.shadow.normalBias = 0.045;
+      model.add(lampSpot);
+      createdLights.push(lampSpot);
+
+      const bulbGlow = new THREE.PointLight(LAMP_LIGHT_COLOR, 12, 3.8, 2);
+      bulbGlow.name = "KhodorOS_BulbGlow";
+      bulbNode.add(bulbGlow);
+      createdLights.push(bulbGlow);
+
+      const lightPoolTexture = createDeskLightPoolTexture();
+      const lightPoolMaterial = new THREE.MeshBasicMaterial({
+        map: lightPoolTexture,
+        transparent: true,
+        opacity: 0.32,
+        depthTest: true,
+        depthWrite: false,
+        blending: THREE.NormalBlending,
+        side: THREE.DoubleSide,
+      });
+      const lightPool = new THREE.Mesh(
+        new THREE.CircleGeometry(DESK_LIGHT_POOL_RADIUS, 96),
+        lightPoolMaterial,
+      );
+      lightPool.name = "KhodorOS_DeskLightPool";
+      lightPool.position.set(...DESK_LIGHT_POOL_POSITION);
+      lightPool.rotation.x = -Math.PI / 2;
+      lightPool.renderOrder = 3;
+      model.add(lightPool);
+      createdObjects.push(lightPool);
+      createdMaterials.push(lightPoolMaterial);
+      createdTextures.push(lightPoolTexture);
+    }
+
     return () => {
+      createdLights.forEach((light) => {
+        light.parent?.remove(light);
+        light.shadow?.dispose?.();
+      });
+      createdObjects.forEach((object) => object.parent?.remove(object));
+      clonedMaterials.forEach((material) => material.dispose());
+      createdMaterials.forEach((material) => material.dispose());
+      createdTextures.forEach((texture) => texture.dispose());
       screenMaterialRef.current?.dispose();
     };
   }, [model]);
@@ -382,6 +577,52 @@ function Model({
       position: screenCenter.toArray(),
     });
   }, [model, onScreenReady]);
+
+  useEffect(() => {
+    if (!isScreenFocused) return;
+
+    const screenHitbox = screenHitboxRef.current;
+    if (!screenHitbox) return;
+
+    screenHitbox.updateWorldMatrix(true, false);
+
+    const screenBounds = new THREE.Box3().setFromObject(screenHitbox);
+    const screenCenter = screenBounds.getCenter(new THREE.Vector3());
+    const focusCameraState = getScreenFocusCameraState(screenCenter, isMobile);
+
+    if (!finalScreenCameraRef.current) {
+      finalScreenCameraRef.current = new THREE.PerspectiveCamera();
+    }
+
+    const finalScreenCamera = finalScreenCameraRef.current;
+    finalScreenCamera.fov = camera.fov;
+    finalScreenCamera.near = camera.near;
+    finalScreenCamera.far = camera.far;
+    finalScreenCamera.aspect = size.width / size.height;
+    finalScreenCamera.position.copy(focusCameraState.position);
+    finalScreenCamera.up.copy(camera.up);
+    finalScreenCamera.lookAt(focusCameraState.target);
+    finalScreenCamera.updateProjectionMatrix();
+    finalScreenCamera.updateMatrixWorld(true);
+
+    const finalScreenRect = getProjectedMeshRect(
+      screenHitbox,
+      finalScreenCamera,
+      size,
+    );
+
+    if (finalScreenRect) {
+      onFinalScreenRectChange(finalScreenRect);
+    }
+  }, [
+    camera,
+    isMobile,
+    isScreenFocused,
+    onFinalScreenRectChange,
+    size,
+    size.height,
+    size.width,
+  ]);
 
   useFrame(() => {
     if (!isScreenFocused) return;
@@ -534,18 +775,22 @@ function DesktopWindow({ className = "", title, onClose }) {
               ) : null}
               {section.links || section.link ? (
                 <div className="desktop-window__links">
-                  {(section.links ?? [
-                    {
-                      href: section.link,
-                      label: section.linkLabel ?? "GitHub",
-                    },
-                  ]).map((link) => (
+                  {(
+                    section.links ?? [
+                      {
+                        href: section.link,
+                        label: section.linkLabel ?? "GitHub",
+                      },
+                    ]
+                  ).map((link) => (
                     <a
                       className="desktop-window__link"
                       href={link.href}
                       key={link.href}
                       rel="noreferrer"
-                      target={link.href.startsWith("http") ? "_blank" : undefined}
+                      target={
+                        link.href.startsWith("http") ? "_blank" : undefined
+                      }
                     >
                       {link.label}
                     </a>
@@ -577,20 +822,42 @@ function MobileFolderTab({ isActive, title, onOpen }) {
   );
 }
 
-function DesktopScreen({ isMobile, isVisible, opacity, screenRect }) {
+function DesktopBootScreen() {
+  return (
+    <section className="desktop-screen__boot" aria-live="polite">
+      <div className="desktop-screen__boot-panel">
+        <p className="desktop-screen__boot-title">Booting KhodorOS</p>
+        <div className="desktop-screen__boot-loader" aria-hidden="true">
+          <span />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function DesktopScreen({
+  isBooting,
+  isMobile,
+  isVisible,
+  opacity,
+  screenRect,
+}) {
   const [openWindow, setOpenWindow] = useState(null);
 
   useEffect(() => {
-    if (!isVisible) {
+    if (!isVisible || isBooting) {
       setOpenWindow(null);
     }
-  }, [isVisible]);
+  }, [isBooting, isVisible]);
 
   if (!isVisible || !screenRect) return null;
 
   if (isMobile) {
     return (
-      <section className="desktop-screen desktop-screen--mobile" style={{ opacity }}>
+      <section
+        className="desktop-screen desktop-screen--mobile"
+        style={{ opacity }}
+      >
         <div className="desktop-screen__mobile-shell">
           <div className="desktop-screen__mobile-folders">
             {DESKTOP_FOLDERS.map((folder) => (
@@ -632,18 +899,28 @@ function DesktopScreen({ isMobile, isVisible, opacity, screenRect }) {
         }}
       >
         <div className="desktop-screen__surface">
-          <div className="desktop-screen__folders">
-            {DESKTOP_FOLDERS.map((folder) => (
-              <FolderIcon key={folder} title={folder} onOpen={setOpenWindow} />
-            ))}
-          </div>
+          {isBooting ? (
+            <DesktopBootScreen />
+          ) : (
+            <>
+              <div className="desktop-screen__folders">
+                {DESKTOP_FOLDERS.map((folder) => (
+                  <FolderIcon
+                    key={folder}
+                    title={folder}
+                    onOpen={setOpenWindow}
+                  />
+                ))}
+              </div>
 
-          {openWindow ? (
-            <DesktopWindow
-              title={openWindow}
-              onClose={() => setOpenWindow(null)}
-            />
-          ) : null}
+              {openWindow ? (
+                <DesktopWindow
+                  title={openWindow}
+                  onClose={() => setOpenWindow(null)}
+                />
+              ) : null}
+            </>
+          )}
         </div>
       </div>
     </section>
@@ -685,6 +962,7 @@ function CameraRig({
   isScreenFocused,
   isMobile,
   isRoomTransitioning,
+  onScreenFocusSettledChange,
   onScreenRevealChange,
   screenTarget,
 }) {
@@ -703,45 +981,23 @@ function CameraRig({
 
   const desiredPosition = useRef(roomPosition.clone());
   const desiredTarget = useRef(roomTarget.clone());
+  const lastScreenFocusSettledRef = useRef(false);
 
   useFrame((_, delta) => {
     const controls = controlsRef.current;
     if (!controls) return;
 
     let nextReveal = 0;
+    let nextFocusPosition = null;
 
     if (!hasEnteredWorld) {
       desiredPosition.current.copy(introPosition);
       desiredTarget.current.copy(introTarget);
     } else if (isScreenFocused && screenTarget) {
-      const screenCenter = new THREE.Vector3(...screenTarget.position);
-      const directionFromScreenToRoomCamera = roomPosition
-        .clone()
-        .sub(screenCenter);
-      directionFromScreenToRoomCamera.y = 0;
+      const { position: focusPosition, target: focusTarget } =
+        getScreenFocusCameraState(screenTarget.position, isMobile);
 
-      if (directionFromScreenToRoomCamera.lengthSq() === 0) {
-        directionFromScreenToRoomCamera.set(0, 0, 1);
-      } else {
-        directionFromScreenToRoomCamera.normalize();
-      }
-
-      const leftVector = new THREE.Vector3()
-        .crossVectors(
-          directionFromScreenToRoomCamera,
-          new THREE.Vector3(0, 0, 0),
-        )
-        .normalize();
-      const focusTarget = screenCenter
-        .clone()
-        .add(leftVector.multiplyScalar(0.08));
-
-      const focusDistance = isMobile ? 0.78 : 1.15;
-      const focusPosition = screenCenter
-        .clone()
-        .add(directionFromScreenToRoomCamera.multiplyScalar(focusDistance));
-      focusPosition.y = screenCenter.y;
-
+      nextFocusPosition = focusPosition;
       const totalDistance = roomPosition.distanceTo(focusPosition);
       desiredPosition.current.copy(focusPosition);
       desiredTarget.current.copy(focusTarget);
@@ -761,6 +1017,10 @@ function CameraRig({
       desiredPosition.current.copy(roomPosition);
       desiredTarget.current.copy(roomTarget);
     } else {
+      if (lastScreenFocusSettledRef.current) {
+        lastScreenFocusSettledRef.current = false;
+        onScreenFocusSettledChange(false);
+      }
       onScreenRevealChange(nextReveal);
       return;
     }
@@ -769,6 +1029,17 @@ function CameraRig({
     camera.position.lerp(desiredPosition.current, damping);
     controls.target.lerp(desiredTarget.current, damping);
     controls.update();
+
+    const isScreenFocusSettled =
+      Boolean(nextFocusPosition) &&
+      camera.position.distanceTo(nextFocusPosition) < 0.08 &&
+      controls.target.distanceTo(desiredTarget.current) < 0.04;
+
+    if (lastScreenFocusSettledRef.current !== isScreenFocusSettled) {
+      lastScreenFocusSettledRef.current = isScreenFocusSettled;
+      onScreenFocusSettledChange(isScreenFocusSettled);
+    }
+
     onScreenRevealChange(nextReveal);
   });
 
@@ -779,12 +1050,17 @@ export default function App() {
   const controlsRef = useRef(null);
   const [hasEnteredWorld, setHasEnteredWorld] = useState(false);
   const [isScreenFocused, setIsScreenFocused] = useState(false);
+  const [isScreenFocusSettled, setIsScreenFocusSettled] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isRoomTransitioning, setIsRoomTransitioning] = useState(false);
+  const [desktopScreenPhase, setDesktopScreenPhase] = useState("hidden");
   const [isMobileScreenUiVisible, setIsMobileScreenUiVisible] = useState(false);
   const [screenReveal, setScreenReveal] = useState(0);
   const [screenTarget, setScreenTarget] = useState(null);
   const [screenRect, setScreenRect] = useState(null);
+  const [finalScreenRect, setFinalScreenRect] = useState(null);
+  const isDesktopScreenVisible = desktopScreenPhase !== "hidden";
+  const isDesktopScreenBooting = desktopScreenPhase === "booting";
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
@@ -795,6 +1071,41 @@ export default function App() {
 
     return () => mediaQuery.removeEventListener("change", updateIsMobile);
   }, []);
+
+  useEffect(() => {
+    if (isMobile) {
+      setDesktopScreenPhase("hidden");
+      setFinalScreenRect(null);
+      return undefined;
+    }
+
+    if (!isScreenFocused) {
+      setDesktopScreenPhase("hidden");
+      setIsScreenFocusSettled(false);
+      setFinalScreenRect(null);
+      return undefined;
+    }
+
+    if (!isScreenFocusSettled) {
+      setDesktopScreenPhase("hidden");
+      return undefined;
+    }
+
+    setDesktopScreenPhase("hidden");
+
+    const bootTimeoutId = window.setTimeout(() => {
+      setDesktopScreenPhase("booting");
+    }, DESKTOP_BOOT_START_DELAY_MS);
+
+    const readyTimeoutId = window.setTimeout(() => {
+      setDesktopScreenPhase("ready");
+    }, DESKTOP_BOOT_START_DELAY_MS + DESKTOP_BOOT_DURATION_MS);
+
+    return () => {
+      window.clearTimeout(bootTimeoutId);
+      window.clearTimeout(readyTimeoutId);
+    };
+  }, [isMobile, isScreenFocused, isScreenFocusSettled]);
 
   useEffect(() => {
     if (!isMobile) {
@@ -828,7 +1139,9 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      {!hasEnteredWorld ? <div className="intro-scene-blur" aria-hidden="true" /> : null}
+      {!hasEnteredWorld ? (
+        <div className="intro-scene-blur" aria-hidden="true" />
+      ) : null}
 
       {isScreenFocused ? (
         <button
@@ -844,10 +1157,11 @@ export default function App() {
       ) : null}
 
       <DesktopScreen
+        isBooting={!isMobile && isDesktopScreenBooting}
         isMobile={isMobile}
-        isVisible={isMobile ? isMobileScreenUiVisible : isScreenFocused}
-        opacity={isMobile ? 1 : screenReveal}
-        screenRect={screenRect}
+        isVisible={isMobile ? isMobileScreenUiVisible : isDesktopScreenVisible}
+        opacity={1}
+        screenRect={isMobile ? screenRect : finalScreenRect}
       />
 
       <Canvas
@@ -861,19 +1175,15 @@ export default function App() {
         shadows
       >
         <color attach="background" args={["#0b1020"]} />
-        <ambientLight intensity={1.2} />
-        <directionalLight
-          castShadow
-          intensity={2.2}
-          position={[8, 12, 10]}
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
-        />
-        <directionalLight intensity={0.8} position={[-6, 5, -8]} />
+        <ambientLight intensity={0.92} />
+        <directionalLight intensity={0.72} position={[8, 12, 10]} />
+        <directionalLight intensity={0.42} position={[-6, 5, -8]} />
 
         <Suspense fallback={<Loader />}>
           <Model
+            isMobile={isMobile}
             isScreenFocused={isScreenFocused}
+            onFinalScreenRectChange={setFinalScreenRect}
             onScreenClick={() => {
               if (!hasEnteredWorld) return;
               setIsScreenFocused(true);
@@ -911,6 +1221,7 @@ export default function App() {
           isScreenFocused={isScreenFocused}
           isMobile={isMobile}
           isRoomTransitioning={isRoomTransitioning}
+          onScreenFocusSettledChange={setIsScreenFocusSettled}
           onScreenRevealChange={setScreenReveal}
           screenTarget={screenTarget}
         />
