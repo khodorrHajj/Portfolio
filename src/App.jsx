@@ -32,12 +32,12 @@ const FOLDER_CONTENT = {
   "About Me": [
     {
       heading: "Khodor El Hajj Moussa",
-      meta: "Computer Science Undergraduate | Full-Stack Developer Intern",
+      meta: "Computer Science Undergraduate ",
       body: (
         <>
           I am a <strong>Computer Science undergraduate</strong> at Antonine
-          University, expected Jan 2027, focused on full-stack development and
-          practical software projects.
+          University, focused on full-stack development and practical software
+          projects.
         </>
       ),
     },
