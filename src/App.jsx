@@ -39,6 +39,7 @@ const DESKTOP_FOLDERS = [
   "Education",
   "Contact",
 ];
+const DEFAULT_MOBILE_FOLDER = "About Me";
 
 const FOLDER_CONTENT = {
   "About Me": [
@@ -857,8 +858,13 @@ function DesktopScreen({
   useEffect(() => {
     if (!isVisible || isBooting) {
       setOpenWindow(null);
+      return;
     }
-  }, [isBooting, isVisible]);
+
+    if (isMobile) {
+      setOpenWindow((currentWindow) => currentWindow ?? DEFAULT_MOBILE_FOLDER);
+    }
+  }, [isBooting, isMobile, isVisible]);
 
   if (!isVisible || !screenRect) return null;
 
