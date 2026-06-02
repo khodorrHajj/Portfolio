@@ -1,6 +1,13 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Center, Html, OrbitControls, useGLTF } from "@react-three/drei";
+import { Center, OrbitControls, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
 const MODEL_PATH = "/models/desk_pc_room.optimized.glb";
@@ -8,8 +15,13 @@ const MOBILE_SCREEN_UI_DELAY_MS = 1200;
 const DESKTOP_BOOT_START_DELAY_MS = 500;
 const DESKTOP_BOOT_DURATION_MS = 2500;
 const ROOM_TRANSITION_MS = 900;
+const ROOM_RETURN_DELAY_MS = 280;
 const ROOM_CAMERA_POSITION = [0, 1.0, 5.2];
 const ROOM_TARGET = [0, 0, 0];
+const ROOM_MIN_CAMERA_DISTANCE = 2;
+const ROOM_MAX_CAMERA_DISTANCE = 6.4;
+const SCREEN_MIN_CAMERA_DISTANCE = 0.9;
+const SCREEN_MAX_CAMERA_DISTANCE = 2;
 const INTRO_CAMERA_POSITION = [0, 1.0, 10.5];
 const INTRO_TARGET = [0, 1.05, 7.2];
 const MOBILE_BREAKPOINT = 768;
@@ -47,10 +59,26 @@ const FOLDER_CONTENT = {
     },
     {
       heading: "Current Focus",
-      body: "I am growing toward production-level software engineering work: cleaner architecture, stronger backend systems, useful user experiences, and projects that solve real problems.",
+      body: "I am growing toward better software engineering work: cleaner architecture, stronger backend systems, useful user experiences, and projects that solve real problems.",
     },
   ],
   Projects: [
+    {
+      heading: "Khadamati - Lebanese E-Government Services Platform",
+      meta: "Laravel E-Government App | PHP 8.2, Laravel 12, Blade, Vite, Stripe, Google Cloud Vision, Reverb",
+      body: "A Laravel-based platform that digitizes public-service workflows between Lebanese citizens, municipalities, and platform administrators.",
+      items: [
+        "Built role-specific portals for citizens, municipality users, and admins, covering service discovery, request submission, request tracking, appointments, notifications, and operational oversight.",
+        "Implemented Lebanese ID verification with front/back document uploads, Google Cloud Vision OCR, custom Arabic field parsing, queued background processing, and manual admin approval.",
+        "Integrated Stripe Checkout payments, QR-code-based public request tracking, PDF receipts and official responses, dashboard reports, office discovery with maps, and real-time request chat through Laravel Reverb and Echo.",
+      ],
+      links: [
+        {
+          href: "https://github.com/khodorrHajj/Khadamati",
+          label: "GitHub",
+        },
+      ],
+    },
     {
       heading: "LiraTrack - Lebanese Finance Tracker",
       meta: "Full-Stack Finance App | Next.js, React, TypeScript, FastAPI, PostgreSQL, Docker",
@@ -168,15 +196,7 @@ const FOLDER_CONTENT = {
     },
     {
       heading: "Tools",
-      tags: [
-        "Docker",
-        "Docker Compose",
-        "pytest",
-        "Click",
-        "Rich",
-        "Qt",
-        "Linux/CLI basics",
-      ],
+      tags: ["Docker", "pytest", "Click", "Rich", "Qt"],
     },
     {
       heading: "ML / Computer Vision",
@@ -200,14 +220,14 @@ const FOLDER_CONTENT = {
     {
       heading: "Waiter - DipnDip",
       meta: "Dec 2024 - Nov 2025",
-      body: "Worked in a fast-paced customer-facing environment requiring communication, reliability, multitasking, and teamwork.",
+      body: "Worked in customer facing environment requiring communication, reliability, multitasking, and teamwork.",
     },
   ],
   Education: [
     {
       heading: "Antonine University",
       meta: "B.S. Computer Science",
-      body: "Computer Science undergraduate focused on full-stack development, practical software projects, and software engineering fundamentals.",
+      body: "Computer Science undergraduate.",
     },
     {
       heading: "Languages",
@@ -668,14 +688,6 @@ function Model({
   );
 }
 
-function Loader() {
-  return (
-    <Html center>
-      <div className="loader">Loading 3D scene...</div>
-    </Html>
-  );
-}
-
 useGLTF.preload(MODEL_PATH);
 
 function WelcomePopup({ isVisible, onEnterWorld }) {
@@ -1046,6 +1058,8 @@ function CameraRig({
 
 export default function App() {
   const controlsRef = useRef(null);
+  const roomReturnDelayTimeoutRef = useRef(null);
+  const roomReturnEndTimeoutRef = useRef(null);
   const [hasEnteredWorld, setHasEnteredWorld] = useState(false);
   const [isScreenFocused, setIsScreenFocused] = useState(false);
   const [isScreenFocusSettled, setIsScreenFocusSettled] = useState(false);
@@ -1059,6 +1073,62 @@ export default function App() {
   const [finalScreenRect, setFinalScreenRect] = useState(null);
   const isDesktopScreenVisible = desktopScreenPhase !== "hidden";
   const isDesktopScreenBooting = desktopScreenPhase === "booting";
+
+  const clearRoomReturnTimers = useCallback(() => {
+    if (roomReturnDelayTimeoutRef.current !== null) {
+      window.clearTimeout(roomReturnDelayTimeoutRef.current);
+      roomReturnDelayTimeoutRef.current = null;
+    }
+
+    if (roomReturnEndTimeoutRef.current !== null) {
+      window.clearTimeout(roomReturnEndTimeoutRef.current);
+      roomReturnEndTimeoutRef.current = null;
+    }
+  }, []);
+
+  const beginRoomReturn = useCallback(
+    (delayMs = 0) => {
+      clearRoomReturnTimers();
+
+      if (!hasEnteredWorld || isScreenFocused) return;
+
+      const returnToRoomView = () => {
+        roomReturnDelayTimeoutRef.current = null;
+        setIsRoomTransitioning(true);
+        roomReturnEndTimeoutRef.current = window.setTimeout(() => {
+          setIsRoomTransitioning(false);
+          roomReturnEndTimeoutRef.current = null;
+        }, ROOM_TRANSITION_MS);
+      };
+
+      if (delayMs > 0) {
+        roomReturnDelayTimeoutRef.current = window.setTimeout(
+          returnToRoomView,
+          delayMs,
+        );
+        return;
+      }
+
+      returnToRoomView();
+    },
+    [clearRoomReturnTimers, hasEnteredWorld, isScreenFocused],
+  );
+
+  const handleRoomControlsStart = useCallback(() => {
+    clearRoomReturnTimers();
+
+    if (!hasEnteredWorld || isScreenFocused) return;
+
+    setIsRoomTransitioning(false);
+  }, [clearRoomReturnTimers, hasEnteredWorld, isScreenFocused]);
+
+  const handleRoomControlsEnd = useCallback(() => {
+    beginRoomReturn(ROOM_RETURN_DELAY_MS);
+  }, [beginRoomReturn]);
+
+  useEffect(() => {
+    return clearRoomReturnTimers;
+  }, [clearRoomReturnTimers]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
@@ -1124,16 +1194,19 @@ export default function App() {
   }, [isMobile, isScreenFocused]);
 
   useEffect(() => {
-    if (!hasEnteredWorld || isScreenFocused) return undefined;
+    if (!hasEnteredWorld || isScreenFocused) {
+      clearRoomReturnTimers();
+      return undefined;
+    }
 
-    setIsRoomTransitioning(true);
-
-    const timeoutId = window.setTimeout(() => {
-      setIsRoomTransitioning(false);
-    }, ROOM_TRANSITION_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [hasEnteredWorld, isScreenFocused]);
+    beginRoomReturn();
+    return undefined;
+  }, [
+    beginRoomReturn,
+    clearRoomReturnTimers,
+    hasEnteredWorld,
+    isScreenFocused,
+  ]);
 
   return (
     <main className="app-shell">
@@ -1185,7 +1258,7 @@ export default function App() {
         <directionalLight intensity={0.72} position={[8, 12, 10]} />
         <directionalLight intensity={0.42} position={[-6, 5, -8]} />
 
-        <Suspense fallback={<Loader />}>
+        <Suspense fallback={null}>
           <Model
             isMobile={isMobile}
             isScreenFocused={isScreenFocused}
@@ -1207,10 +1280,20 @@ export default function App() {
           enablePan={false}
           enableZoom={hasEnteredWorld && !isScreenFocused}
           enableRotate={hasEnteredWorld && !isScreenFocused}
+          onStart={handleRoomControlsStart}
+          onEnd={handleRoomControlsEnd}
           minAzimuthAngle={-Math.PI / 4}
-          minDistance={isScreenFocused ? 0.9 : 2}
+          minDistance={
+            isScreenFocused
+              ? SCREEN_MIN_CAMERA_DISTANCE
+              : ROOM_MIN_CAMERA_DISTANCE
+          }
           maxAzimuthAngle={Math.PI / 4}
-          maxDistance={isScreenFocused ? 2 : 20}
+          maxDistance={
+            isScreenFocused
+              ? SCREEN_MAX_CAMERA_DISTANCE
+              : ROOM_MAX_CAMERA_DISTANCE
+          }
           maxPolarAngle={Math.PI / 2 + Math.PI / 9}
           minPolarAngle={Math.PI / 2 - Math.PI / 9}
         />
