@@ -48,22 +48,39 @@ const FOLDER_CONTENT = {
       meta: "Computer Science Undergraduate ",
       body: (
         <>
-          I am a <strong>Computer Science undergraduate</strong> at Antonine
-          University, focused on full-stack development and practical software
-          projects.
+          I am a Computer Science undergraduate at Antonine University, focused
+          on full-stack development and practical software projects.
         </>
       ),
     },
     {
-      heading: "What I Build",
-      body: "I build and deploy applications with React, Next.js, TypeScript, FastAPI, PostgreSQL, Docker, and Python, with extra project work in computer vision, developer tooling, and compiler fundamentals.",
+      heading: "What I like",
+      body: "I like to learn new technologies and apply them to projects that solve real problems or bring interesting ideas to life. I am passionate about building useful software and continuously improving my skills as a developer.",
     },
+
     {
       heading: "Current Focus",
       body: "I am growing toward better software engineering work: cleaner architecture, stronger backend systems, useful user experiences, and projects that solve real problems.",
     },
   ],
   Projects: [
+    {
+      heading: "RAG Document Assistant",
+      meta: "Full-Stack AI/RAG App | React, TypeScript, FastAPI, Supabase, PostgreSQL, pgvector, Redis, OpenRouter, Docker",
+      body: "A secure document question-answering platform that lets users upload PDF, TXT, and DOCX files, index them into searchable chunks, and ask grounded questions with source citations.",
+      items: [
+        "Built the full RAG pipeline: document upload, parsing, structure-aware chunking, local embeddings, pgvector storage, hybrid retrieval, reranking, and citation-backed LLM answers.",
+        "Implemented Supabase Auth, private storage, tenant-scoped document access, JWT verification, Redis queue processing, and background indexing workers.",
+        "Added features including feedback, audit logs, evaluation checks, developer monitoring dashboard, safe debug mode, and prompt-injection protection.",
+        "Designed a dark React interface for dashboard, document upload/status tracking, chat, citations, and developer observability.",
+      ],
+      links: [
+        {
+          href: "https://github.com/khodorrHajj/Rag-System",
+          label: "GitHub",
+        },
+      ],
+    },
     {
       heading: "Khadamati - Lebanese E-Government Services Platform",
       meta: "Laravel E-Government App | PHP 8.2, Laravel 12, Blade, Vite, Stripe, Google Cloud Vision, Reverb",
@@ -94,10 +111,6 @@ const FOLDER_CONTENT = {
           href: "https://github.com/khodorrHajj/Lebanese_Finance_Tracker",
           label: "GitHub",
         },
-        {
-          href: "https://lebanese-finance-tracker.vercel.app",
-          label: "Live",
-        },
       ],
     },
     {
@@ -113,26 +126,6 @@ const FOLDER_CONTENT = {
         {
           href: "https://github.com/khodorrHajj/ASL-Real-Time-Sign-Language-Translator",
           label: "GitHub",
-        },
-      ],
-    },
-    {
-      heading: "repo-analyzer - GitHub Repository Analyzer",
-      meta: "Published Python CLI Tool | Python, Click, Rich, Requests, pytest, PyPI",
-      body: "A Python CLI package for GitHub repository due diligence, helping developers and recruiters evaluate repository health directly from the terminal.",
-      items: [
-        "Built analysis for activity, community signals, maintenance, documentation, engineering hygiene, contributor risk, bus factor, ownership concentration, and overall health scoring.",
-        "Implemented recruiter mode, side-by-side comparison, JSON/PDF export, GitHub token support, caching controls, and terminal-friendly Rich output.",
-        "Packaged the tool for PyPI and added pytest-based support for CLI and analysis behavior.",
-      ],
-      links: [
-        {
-          href: "https://github.com/khodorrHajj/GithubRepoAnalyzer",
-          label: "GitHub",
-        },
-        {
-          href: "https://pypi.org/project/repo-analyzer",
-          label: "PyPI",
         },
       ],
     },
@@ -165,15 +158,12 @@ const FOLDER_CONTENT = {
         "FastAPI",
         "REST APIs",
         "SQL",
-        "Git",
-        "GitHub",
       ],
     },
     {
       heading: "Backend & Databases",
       tags: [
         "PostgreSQL",
-        "SQLAlchemy",
         "Alembic",
         "MySQL",
         "SQLite",
@@ -185,33 +175,43 @@ const FOLDER_CONTENT = {
     },
     {
       heading: "Frontend",
-      tags: [
-        "React",
-        "Next.js",
-        "Tailwind CSS",
-        "HTML/CSS",
-        "Three.js",
-        "React Three Fiber",
-        "Vite",
-      ],
+      tags: ["React", "Next.js", "Tailwind CSS", "HTML/CSS"],
     },
     {
       heading: "Tools",
-      tags: ["Docker", "pytest", "Click", "Rich", "Qt"],
+      tags: [
+        "Docker",
+        "Qt",
+        "Supabase",
+        "PostgreSQL",
+        "pgvector",
+        "Redis",
+        "OpenRouter",
+      ],
     },
     {
       heading: "ML / Computer Vision",
-      tags: ["MediaPipe", "OpenCV", "PyTorch", "ONNX", "scikit-learn"],
+      tags: ["MediaPipe", "OpenCV", "PyTorch", "scikit-learn"],
     },
     {
       heading: "Familiar / Class & Lab Experience",
-      tags: ["C++", "C#", "PHP", "Laravel", ".NET", "MongoDB"],
+      tags: [
+        "C++",
+        "C#",
+        "PHP",
+        "Laravel",
+        ".NET",
+        "MongoDB",
+        "Java",
+        "Azure",
+        "Assembly",
+      ],
     },
   ],
   Experience: [
     {
       heading: "Programming Instructor - Jtech & Istay",
-      meta: "2024 - Present",
+      meta: "Jan 2024 - May 2026",
       body: "Taught programming and robotics fundamentals across 5 classes at Val Pere Jacques, SSCC Hadath, and Notre Dame De Jamhour.",
       items: [
         "Led beginner-friendly sessions using Arduino, Micro:bit, Tinkercad, Minecraft Education, and Microsoft Arcade.",
@@ -220,7 +220,7 @@ const FOLDER_CONTENT = {
     },
     {
       heading: "Waiter - DipnDip",
-      meta: "Dec 2024 - Nov 2025",
+      meta: "April 2025 - October 2025",
       body: "Worked in customer facing environment requiring communication, reliability, multitasking, and teamwork.",
     },
   ],
@@ -228,7 +228,7 @@ const FOLDER_CONTENT = {
     {
       heading: "Antonine University",
       meta: "B.S. Computer Science",
-      body: "Computer Science undergraduate.",
+      body: "Computer Science undergraduate, expected graduation Fall 2026 semester.",
     },
     {
       heading: "Languages",
@@ -267,16 +267,6 @@ const FOLDER_CONTENT = {
         {
           href: "https://github.com/khodorrHajj",
           label: "Open GitHub",
-        },
-      ],
-    },
-    {
-      heading: "Live Project",
-      body: "lebanese-finance-tracker.vercel.app",
-      links: [
-        {
-          href: "https://lebanese-finance-tracker.vercel.app",
-          label: "Open app",
         },
       ],
     },
